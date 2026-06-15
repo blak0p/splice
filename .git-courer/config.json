@@ -1,0 +1,5 @@
+{
+  "description": "",
+  "test_command": "go test ./...",
+  "base_branch": "main"
+}
