@@ -1,0 +1,8 @@
+[
+  {
+    "sha": "1ad1aa82605e51fb3f0898d4e63ec03159da9ac0",
+    "message": "feat: implement markdown parsing and document merging logic\n\nWHY\nThe project lacked the necessary infrastructure to parse markdown, represent its structure as an AST, and merge different document versions at a section level.\n\nWHAT\n* Added goldmark and tree-sitter dependencies for markdown processing\n* Implemented a tree-sitter based parser to extract headings and sections\n* Defined a hierarchical AST structure with Document, Section, and Heading types\n* Added a merge package to combine documents by matching headings and preserving structure\n* Implemented Render and Merge functions to orchestrate parsing, merging, and reconstruction\n* Updated system instructions to enforce strict JSON output",
+    "author": "Alejandro",
+    "date": "2026-06-15T09:08:52Z"
+  }
+]
