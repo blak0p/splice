@@ -24,11 +24,11 @@ func Render(doc *ast.Document) string {
 			sb.WriteByte(' ')
 			sb.WriteString(section.Heading.Text)
 		}
-		if section.Body.Content != "" {
+		if len(section.Body.Lines) > 0 {
 			if section.Heading != nil {
-				sb.WriteByte('\n')
+				sb.WriteString("\n\n")
 			}
-			sb.WriteString(section.Body.Content)
+			sb.WriteString(strings.Join(section.Body.Lines, "\n"))
 		}
 		sections = append(sections, sb.String())
 	}

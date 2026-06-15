@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/blak0p/splice/internal/ast"
@@ -23,20 +24,20 @@ func TestRenderRoundTrip(t *testing.T) {
 	if len(doc2.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(doc2.Sections))
 	}
-	assertSection(t, doc2.Sections[0], 1, "intro", "intro body")
-	assertSection(t, doc2.Sections[1], 2, "details", "details body")
+	assertSection(t, doc2.Sections[0], 1, "Intro", []string{"intro body"})
+	assertSection(t, doc2.Sections[1], 2, "Details", []string{"details body"})
 }
 
 func TestRenderPreHeadingThenHeadings(t *testing.T) {
 	doc := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: nil, Body: ast.Body{Content: "pre-heading content"}},
-			{Heading: &ast.Heading{Level: 1, Text: "First"}, Body: ast.Body{Content: "body"}},
+			{Heading: nil, Body: ast.Body{Lines: []string{"pre-heading content"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "First"}, Body: ast.Body{Lines: []string{"body"}}},
 		},
 	}
 
 	got := Render(doc)
-	want := "pre-heading content\n\n# First\nbody\n"
+	want := "pre-heading content\n\n# First\n\nbody\n"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -45,20 +46,33 @@ func TestRenderPreHeadingThenHeadings(t *testing.T) {
 func TestRenderMultiSectionPreservesBoundaries(t *testing.T) {
 	doc := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "One"}, Body: ast.Body{Content: "body one"}},
-			{Heading: &ast.Heading{Level: 1, Text: "Two"}, Body: ast.Body{Content: "body two"}},
-			{Heading: &ast.Heading{Level: 1, Text: "Three"}, Body: ast.Body{Content: "body three"}},
+			{Heading: &ast.Heading{Level: 1, Text: "One"}, Body: ast.Body{Lines: []string{"body one"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Two"}, Body: ast.Body{Lines: []string{"body two"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Three"}, Body: ast.Body{Lines: []string{"body three"}}},
 		},
 	}
 
 	got := Render(doc)
-	want := "# One\nbody one\n\n# Two\nbody two\n\n# Three\nbody three\n"
+	want := "# One\n\nbody one\n\n# Two\n\nbody two\n\n# Three\n\nbody three\n"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
 }
 
-func assertSection(t *testing.T, s ast.Section, level int, text, body string) {
+func TestRenderTrailingNewline(t *testing.T) {
+	doc := &ast.Document{
+		Sections: []ast.Section{
+			{Heading: &ast.Heading{Level: 1, Text: "Title"}, Body: ast.Body{Lines: []string{"body"}}},
+		},
+	}
+
+	got := Render(doc)
+	if !strings.HasSuffix(got, "\n") {
+		t.Fatalf("expected trailing newline, got %q", got)
+	}
+}
+
+func assertSection(t *testing.T, s ast.Section, level int, text string, body []string) {
 	t.Helper()
 	if s.Heading == nil {
 		t.Fatalf("expected heading, got nil")
@@ -69,7 +83,12 @@ func assertSection(t *testing.T, s ast.Section, level int, text, body string) {
 	if s.Heading.Text != text {
 		t.Fatalf("expected text %q, got %q", text, s.Heading.Text)
 	}
-	if s.Body.Content != body {
-		t.Fatalf("expected body %q, got %q", body, s.Body.Content)
+	if len(s.Body.Lines) != len(body) {
+		t.Fatalf("expected body %v, got %v", body, s.Body.Lines)
+	}
+	for i, line := range body {
+		if s.Body.Lines[i] != line {
+			t.Fatalf("expected body line %q, got %q", line, s.Body.Lines[i])
+		}
 	}
 }

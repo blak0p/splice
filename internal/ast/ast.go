@@ -18,7 +18,7 @@ type Heading struct {
 	Text  string
 }
 
-// Body holds the raw Markdown content that belongs to a section.
+// Body holds the lines of Markdown content that belong to a section.
 type Body struct {
-	Content string
+	Lines []string
 }

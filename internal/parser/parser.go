@@ -86,7 +86,8 @@ func flattenChildSections(node *sitter.Node, src []byte) []ast.Section {
 // Returns nil if the section has no content (pure grouping node).
 func extractSection(node *sitter.Node, src []byte) *ast.Section {
 	var heading *ast.Heading
-	var bodyParts []string
+	var lines []string
+	var blockCount int
 
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
@@ -99,20 +100,28 @@ func extractSection(node *sitter.Node, src []byte) *ast.Section {
 			// Handled by flattenChildSections — skip here
 
 		default:
-			content := strings.TrimSpace(child.Content(src))
-			if content != "" {
-				bodyParts = append(bodyParts, content)
+			content := child.Content(src)
+			content = strings.TrimSuffix(content, "\n")
+			if content == "" {
+				continue
 			}
+
+			if blockCount > 0 {
+				lines = append(lines, "")
+			}
+			blockCount++
+
+			lines = append(lines, strings.Split(content, "\n")...)
 		}
 	}
 
-	if heading == nil && len(bodyParts) == 0 {
+	if heading == nil && len(lines) == 0 {
 		return nil
 	}
 
 	return &ast.Section{
 		Heading: heading,
-		Body:    ast.Body{Content: strings.Join(bodyParts, "\n\n")},
+		Body:    ast.Body{Lines: lines},
 	}
 }
 
@@ -149,6 +158,6 @@ func parseHeading(node *sitter.Node, src []byte) *ast.Heading {
 
 	return &ast.Heading{
 		Level: level,
-		Text:  strings.ToLower(strings.TrimSpace(text)),
+		Text:  strings.TrimSpace(text),
 	}
 }

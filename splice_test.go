@@ -3,6 +3,7 @@ package splice_test
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -206,34 +207,46 @@ func TestMerge_DuplicateHeadings(t *testing.T) {
 	}
 }
 
-// TestMerge_RealWorld performs a real-world merge using AGENTS.md files.
-func TestMerge_RealWorld(t *testing.T) {
+// TestMerge_E2E walks testdata directories and verifies each case.
+func TestMerge_E2E(t *testing.T) {
 	ctx := context.Background()
 
-	bakContent, err := os.ReadFile("/home/alejandro/dev/.entorno/splice/.config/opencode/AGENTS.md.bak")
+	entries, err := os.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf("failed to read AGENTS.md.bak: %v", err)
+		t.Fatalf("failed to read testdata: %v", err)
 	}
 
-	mdContent, err := os.ReadFile("/home/alejandro/dev/.entorno/splice/.config/opencode/AGENTS.md")
-	if err != nil {
-		t.Fatalf("failed to read AGENTS.md: %v", err)
-	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
 
-	result, err := splice.Merge(ctx, string(bakContent), string(mdContent))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		t.Run(entry.Name(), func(t *testing.T) {
+			dir := filepath.Join("testdata", entry.Name())
 
-	if result == "" {
-		t.Fatal("expected non-empty merged output")
-	}
+			original, err := os.ReadFile(filepath.Join(dir, "original.md"))
+			if err != nil {
+				t.Fatalf("failed to read original.md: %v", err)
+			}
 
-	mergedPath := "testdata/merged-agents.md"
-	if err := os.MkdirAll("testdata", 0o755); err != nil {
-		t.Fatalf("failed to create testdata directory: %v", err)
-	}
-	if err := os.WriteFile(mergedPath, []byte(result), 0o644); err != nil {
-		t.Fatalf("failed to write merged output: %v", err)
+			modified, err := os.ReadFile(filepath.Join(dir, "modified.md"))
+			if err != nil {
+				t.Fatalf("failed to read modified.md: %v", err)
+			}
+
+			expected, err := os.ReadFile(filepath.Join(dir, "expected.md"))
+			if err != nil {
+				t.Fatalf("failed to read expected.md: %v", err)
+			}
+
+			got, err := splice.Merge(ctx, string(original), string(modified))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != string(expected) {
+				t.Fatalf("expected:\n%s\n\ngot:\n%s", string(expected), got)
+			}
+		})
 	}
 }

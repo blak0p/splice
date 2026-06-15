@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/blak0p/splice/internal/ast"
@@ -15,8 +16,8 @@ func TestParseHeadingExtraction(t *testing.T) {
 	if len(doc.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(doc.Sections))
 	}
-	assertSection(t, doc.Sections[0], 1, "intro", "intro body")
-	assertSection(t, doc.Sections[1], 2, "details", "details body")
+	assertSection(t, doc.Sections[0], 1, "Intro", []string{"intro body"})
+	assertSection(t, doc.Sections[1], 2, "Details", []string{"details body"})
 }
 
 func TestParsePreHeadingContent(t *testing.T) {
@@ -31,10 +32,11 @@ func TestParsePreHeadingContent(t *testing.T) {
 	if doc.Sections[0].Heading != nil {
 		t.Fatalf("expected implicit section with nil heading, got %+v", doc.Sections[0].Heading)
 	}
-	if doc.Sections[0].Body.Content != "pre-heading content" {
-		t.Fatalf("unexpected pre-heading content: %q", doc.Sections[0].Body.Content)
+	want := []string{"pre-heading content"}
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
+		t.Fatalf("unexpected pre-heading content: %v", doc.Sections[0].Body.Lines)
 	}
-	assertSection(t, doc.Sections[1], 1, "first", "body")
+	assertSection(t, doc.Sections[1], 1, "First", []string{"body"})
 }
 
 func TestParseNoHeadings(t *testing.T) {
@@ -49,8 +51,9 @@ func TestParseNoHeadings(t *testing.T) {
 	if doc.Sections[0].Heading != nil {
 		t.Fatalf("expected implicit section with nil heading, got %+v", doc.Sections[0].Heading)
 	}
-	if doc.Sections[0].Body.Content != "just some content\nwithout headings" {
-		t.Fatalf("unexpected body content: %q", doc.Sections[0].Body.Content)
+	want := []string{"just some content", "without headings"}
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
+		t.Fatalf("unexpected body content: %v", doc.Sections[0].Body.Lines)
 	}
 }
 
@@ -77,7 +80,22 @@ func TestParseUnparseableInput(t *testing.T) {
 	}
 }
 
-func assertSection(t *testing.T, s ast.Section, level int, text, body string) {
+func TestParseBlankLinesBetweenBlocks(t *testing.T) {
+	input := "# Para\n\nFirst block.\n\nSecond block.\n"
+	doc, err := Parse(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(doc.Sections) != 1 {
+		t.Fatalf("expected 1 section, got %d", len(doc.Sections))
+	}
+	want := []string{"First block.", "", "Second block."}
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
+		t.Fatalf("expected %v, got %v", want, doc.Sections[0].Body.Lines)
+	}
+}
+
+func assertSection(t *testing.T, s ast.Section, level int, text string, body []string) {
 	t.Helper()
 	if s.Heading == nil {
 		t.Fatalf("expected heading, got nil")
@@ -88,7 +106,7 @@ func assertSection(t *testing.T, s ast.Section, level int, text, body string) {
 	if s.Heading.Text != text {
 		t.Fatalf("expected heading text %q, got %q", text, s.Heading.Text)
 	}
-	if s.Body.Content != body {
-		t.Fatalf("expected body %q, got %q", body, s.Body.Content)
+	if !reflect.DeepEqual(s.Body.Lines, body) {
+		t.Fatalf("expected body %v, got %v", body, s.Body.Lines)
 	}
 }

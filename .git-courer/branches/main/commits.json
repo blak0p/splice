@@ -4,5 +4,11 @@
     "message": "feat: implement markdown parsing and document merging logic\n\nWHY\nThe project lacked the necessary infrastructure to parse markdown, represent its structure as an AST, and merge different document versions at a section level.\n\nWHAT\n* Added goldmark and tree-sitter dependencies for markdown processing\n* Implemented a tree-sitter based parser to extract headings and sections\n* Defined a hierarchical AST structure with Document, Section, and Heading types\n* Added a merge package to combine documents by matching headings and preserving structure\n* Implemented Render and Merge functions to orchestrate parsing, merging, and reconstruction\n* Updated system instructions to enforce strict JSON output",
     "author": "Alejandro",
     "date": "2026-06-15T09:08:52Z"
+  },
+  {
+    "sha": "73fac977f7fe68f5caa45171bed5cc5c1b9e9b80",
+    "message": "fix: refactor section body parsing and implement fuzzy merging\n\nWHY\nStoring section bodies as raw strings made it difficult to manipulate individual lines and caused loss of original content during updates. Additionally, replacing entire sections led to loss of context when lines were slightly altered, and the previous extraction logic lost formatting and heading casing.\n\nWHAT\n* Refactored Body to store a slice of strings representing individual lines instead of a single string.\n* Implemented a merge algorithm using Dice coefficient similarity and bigrams to intelligently reconcile line differences.\n* Updated extraction logic to preserve raw line breaks and original heading casing.\n* Updated the renderer to handle the new slice-based structure and join lines with newlines.\n* Replaced goldmark dependency with go-tree-sitter.\n* Updated various test datasets to align with the new line-based parsing and merging behavior.",
+    "author": "Alejandro",
+    "date": "2026-06-15T10:01:14Z"
   }
 ]
