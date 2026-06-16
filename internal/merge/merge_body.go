@@ -3,7 +3,7 @@ package merge
 import (
 	"strings"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 const similarityThreshold = 0.70
@@ -14,18 +14,18 @@ func mergeBody(origBlocks, modBlocks []ast.Block) []ast.Block {
 	for i := 0; i < len(modBlocks); i++ {
 		if i < len(origBlocks) {
 			orig, mod := origBlocks[i], modBlocks[i]
-			if orig.Type() == mod.Type() {
-				switch orig.Type() {
-				case ast.BlockParagraph:
-					merged = append(merged, ast.Paragraph{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
-				case ast.BlockList:
-					merged = append(merged, ast.List{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
-				default:
-					merged = append(merged, mod) // Atomic Table/CodeBlock merge
-				}
-			} else {
-				merged = append(merged, mod) // Type mismatch: atomic replace
-			}
+	if orig.Kind() == mod.Kind() {
+		switch orig.Kind() {
+		case ast.KindParagraph:
+			merged = append(merged, ast.Paragraph{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
+		case ast.KindList:
+			merged = append(merged, ast.List{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
+		default:
+			merged = append(merged, mod) // Atomic Table/CodeBlock merge
+		}
+	} else {
+		merged = append(merged, mod) // Kind mismatch: atomic replace
+	}
 		} else {
 			merged = append(merged, modBlocks[i]) // Append new blocks
 		}

@@ -3,7 +3,7 @@ package merge
 import (
 	"testing"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 func TestMergeNormalizedHeadingMatch(t *testing.T) {

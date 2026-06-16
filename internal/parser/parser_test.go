@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 func TestParseHeadingExtraction(t *testing.T) {
@@ -123,17 +123,17 @@ func main() {}
 		t.Fatalf("expected 4 blocks, got %d", len(sect.Body.Blocks))
 	}
 
-	if sect.Body.Blocks[0].Type() != ast.BlockParagraph {
-		t.Errorf("expected BlockParagraph, got %v", sect.Body.Blocks[0].Type())
+	if sect.Body.Blocks[0].Kind() != ast.KindParagraph {
+		t.Errorf("expected KindParagraph, got %v", sect.Body.Blocks[0].Kind())
 	}
-	if sect.Body.Blocks[1].Type() != ast.BlockList {
-		t.Errorf("expected BlockList, got %v", sect.Body.Blocks[1].Type())
+	if sect.Body.Blocks[1].Kind() != ast.KindList {
+		t.Errorf("expected KindList, got %v", sect.Body.Blocks[1].Kind())
 	}
-	if sect.Body.Blocks[2].Type() != ast.BlockTable {
-		t.Errorf("expected BlockTable, got %v", sect.Body.Blocks[2].Type())
+	if sect.Body.Blocks[2].Kind() != ast.KindTable {
+		t.Errorf("expected KindTable, got %v", sect.Body.Blocks[2].Kind())
 	}
-	if sect.Body.Blocks[3].Type() != ast.BlockCodeBlock {
-		t.Errorf("expected BlockCodeBlock, got %v", sect.Body.Blocks[3].Type())
+	if sect.Body.Blocks[3].Kind() != ast.KindCodeBlock {
+		t.Errorf("expected KindCodeBlock, got %v", sect.Body.Blocks[3].Kind())
 	}
 }
 
@@ -153,8 +153,8 @@ func TestParseFallbackToParagraph(t *testing.T) {
 	if len(sect.Body.Blocks) != 1 {
 		t.Fatalf("expected 1 block, got %d", len(sect.Body.Blocks))
 	}
-	if sect.Body.Blocks[0].Type() != ast.BlockParagraph {
-		t.Errorf("expected BlockParagraph for HTML fallback, got %v", sect.Body.Blocks[0].Type())
+	if sect.Body.Blocks[0].Kind() != ast.KindParagraph {
+		t.Errorf("expected KindParagraph for HTML fallback, got %v", sect.Body.Blocks[0].Kind())
 	}
 }
 

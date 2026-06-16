@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 	"github.com/blak0p/splice/internal/parser"
 )
 

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 func TestMergeBody_NewLineAppended(t *testing.T) {
@@ -100,7 +100,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 	origPara := ast.Paragraph{ContentLines: []string{"Original line 1.", "Original line 2."}}
 	modPara := ast.Paragraph{ContentLines: []string{"Original line 1.", "Modified line 2."}}
 	gotPara := mergeBody([]ast.Block{origPara}, []ast.Block{modPara})
-	if len(gotPara) != 1 || gotPara[0].Type() != ast.BlockParagraph {
+	if len(gotPara) != 1 || gotPara[0].Kind() != ast.KindParagraph {
 		t.Fatalf("expected 1 paragraph block, got %v", gotPara)
 	}
 	wantParaLines := []string{"Original line 1.", "Modified line 2."}
@@ -112,7 +112,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 	origList := ast.List{ContentLines: []string{"- item 1", "- item 2"}}
 	modList := ast.List{ContentLines: []string{"- item 1", "- item 2 modified"}}
 	gotList := mergeBody([]ast.Block{origList}, []ast.Block{modList})
-	if len(gotList) != 1 || gotList[0].Type() != ast.BlockList {
+	if len(gotList) != 1 || gotList[0].Kind() != ast.KindList {
 		t.Fatalf("expected 1 list block, got %v", gotList)
 	}
 	wantListLines := []string{"- item 1", "- item 2 modified"}
@@ -124,7 +124,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 	origTable := ast.Table{ContentLines: []string{"| A | B |", "|---|---|", "| 1 | 2 |"}}
 	modTable := ast.Table{ContentLines: []string{"| A | B |", "|---|---|", "| 1 | 9 |"}}
 	gotTable := mergeBody([]ast.Block{origTable}, []ast.Block{modTable})
-	if len(gotTable) != 1 || gotTable[0].Type() != ast.BlockTable {
+	if len(gotTable) != 1 || gotTable[0].Kind() != ast.KindTable {
 		t.Fatalf("expected 1 table block, got %v", gotTable)
 	}
 	wantTableLines := []string{"| A | B |", "|---|---|", "| 1 | 9 |"}
@@ -136,7 +136,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 	origCode := ast.CodeBlock{ContentLines: []string{"```go", "fmt.Println(1)", "```"}}
 	modCode := ast.CodeBlock{ContentLines: []string{"```go", "fmt.Println(2)", "```"}}
 	gotCode := mergeBody([]ast.Block{origCode}, []ast.Block{modCode})
-	if len(gotCode) != 1 || gotCode[0].Type() != ast.BlockCodeBlock {
+	if len(gotCode) != 1 || gotCode[0].Kind() != ast.KindCodeBlock {
 		t.Fatalf("expected 1 code block, got %v", gotCode)
 	}
 	wantCodeLines := []string{"```go", "fmt.Println(2)", "```"}
@@ -146,7 +146,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 
 	// 5. Mismatched block types (Paragraph + Table) -> atomic replace
 	gotMismatch := mergeBody([]ast.Block{origPara}, []ast.Block{modTable})
-	if len(gotMismatch) != 1 || gotMismatch[0].Type() != ast.BlockTable {
+	if len(gotMismatch) != 1 || gotMismatch[0].Kind() != ast.KindTable {
 		t.Fatalf("expected modified block (Table) to replace original (Paragraph), got %v", gotMismatch)
 	}
 	if !reflect.DeepEqual(gotMismatch[0].Lines(), wantTableLines) {
@@ -155,13 +155,13 @@ func TestMergeBodyBlocks(t *testing.T) {
 
 	// 6. Append new blocks
 	gotAppend := mergeBody([]ast.Block{origPara}, []ast.Block{origPara, modList})
-	if len(gotAppend) != 2 || gotAppend[0].Type() != ast.BlockParagraph || gotAppend[1].Type() != ast.BlockList {
+	if len(gotAppend) != 2 || gotAppend[0].Kind() != ast.KindParagraph || gotAppend[1].Kind() != ast.KindList {
 		t.Fatalf("expected Paragraph and List blocks, got %v", gotAppend)
 	}
 
 	// Triangulation: 7. Fewer blocks in modified (original blocks deleted)
 	gotFewer := mergeBody([]ast.Block{origPara, origList}, []ast.Block{modPara})
-	if len(gotFewer) != 1 || gotFewer[0].Type() != ast.BlockParagraph {
+	if len(gotFewer) != 1 || gotFewer[0].Kind() != ast.KindParagraph {
 		t.Fatalf("expected only 1 Paragraph block in merged, got %v", gotFewer)
 	}
 	if !reflect.DeepEqual(gotFewer[0].Lines(), wantParaLines) {
@@ -172,7 +172,7 @@ func TestMergeBodyBlocks(t *testing.T) {
 	origPara2 := ast.Paragraph{ContentLines: []string{"Second original."}}
 	modPara2 := ast.Paragraph{ContentLines: []string{"Second modified."}}
 	gotMultiple := mergeBody([]ast.Block{origPara, origPara2}, []ast.Block{modPara, modPara2})
-	if len(gotMultiple) != 2 || gotMultiple[0].Type() != ast.BlockParagraph || gotMultiple[1].Type() != ast.BlockParagraph {
+	if len(gotMultiple) != 2 || gotMultiple[0].Kind() != ast.KindParagraph || gotMultiple[1].Kind() != ast.KindParagraph {
 		t.Fatalf("expected 2 Paragraph blocks, got %v", gotMultiple)
 	}
 	if !reflect.DeepEqual(gotMultiple[1].Lines(), []string{"Second modified."}) {

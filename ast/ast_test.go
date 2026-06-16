@@ -4,36 +4,36 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
-func TestBlockTypesAndInterface(t *testing.T) {
+func TestBlockKindsAndInterface(t *testing.T) {
 	var _ ast.Block = ast.Paragraph{}
 	var _ ast.Block = ast.List{}
 	var _ ast.Block = ast.Table{}
 	var _ ast.Block = ast.CodeBlock{}
 
 	p := ast.Paragraph{ContentLines: []string{"line1", "line2"}}
-	if p.Type() != ast.BlockParagraph {
-		t.Errorf("expected Paragraph type, got %s", p.Type())
+	if p.Kind() != ast.KindParagraph {
+		t.Errorf("expected Paragraph kind, got %s", p.Kind())
 	}
 	if !reflect.DeepEqual(p.Lines(), []string{"line1", "line2"}) {
 		t.Errorf("expected lines, got %v", p.Lines())
 	}
 
 	l := ast.List{ContentLines: []string{"- item 1"}}
-	if l.Type() != ast.BlockList {
-		t.Errorf("expected List type, got %s", l.Type())
+	if l.Kind() != ast.KindList {
+		t.Errorf("expected List kind, got %s", l.Kind())
 	}
 
 	tbl := ast.Table{ContentLines: []string{"| col |"}}
-	if tbl.Type() != ast.BlockTable {
-		t.Errorf("expected Table type, got %s", tbl.Type())
+	if tbl.Kind() != ast.KindTable {
+		t.Errorf("expected Table kind, got %s", tbl.Kind())
 	}
 
 	cb := ast.CodeBlock{ContentLines: []string{"```go"}}
-	if cb.Type() != ast.BlockCodeBlock {
-		t.Errorf("expected CodeBlock type, got %s", cb.Type())
+	if cb.Kind() != ast.KindCodeBlock {
+		t.Errorf("expected CodeBlock kind, got %s", cb.Kind())
 	}
 }
 
@@ -51,7 +51,7 @@ func TestBodyLinesHelper(t *testing.T) {
 		t.Errorf("expected %v, got %v", want1, got1)
 	}
 
-		// Case 2: Empty blocks
+	// Case 2: Empty blocks
 	body2 := ast.Body{
 		Blocks: []ast.Block{},
 	}
