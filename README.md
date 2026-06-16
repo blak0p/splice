@@ -4,7 +4,7 @@
 [![Tests](https://github.com/blak0p/splice/actions/workflows/test.yml/badge.svg)](https://github.com/blak0p/splice/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**splice** is a Go library for section-aware 3-way merging of Markdown documents. It parses Markdown into an AST, matches sections by heading, applies changes at block level, and renders the result — all without treating your document as plain text.
+**splice** is a Go library for section-aware 3-way merging of Markdown documents. It parses Markdown into an AST, matches sections by heading, applies changes at block level, and renders the result back — all without treating your document as plain text.
 
 ## Installation
 
@@ -14,36 +14,58 @@ go get github.com/blak0p/splice
 
 Requires Go 1.26+ and CGO (backed by [tree-sitter-markdown](https://github.com/tree-sitter-grammars/tree-sitter-markdown)).
 
-## Usage
+## API
+
+### Parse
 
 ```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "log"
-
-    "github.com/blak0p/splice"
-)
-
-func main() {
-    ctx := context.Background()
-
-    original := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n"
-    modified := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n\n## [1.1.0] — 2026-03-01\n\n### Added\n\n- Dark mode\n"
-
-    result, err := splice.Merge(ctx, original, modified)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Println(result)
+doc, err := splice.Parse("# Hello\n\nThis is a paragraph.")
+if err != nil {
+    log.Fatal(err)
 }
+// doc.Sections[0].Heading.Text == "Hello"
+// doc.Sections[0].Body.Blocks[0].Kind() == ast.KindParagraph
 ```
 
-The merge preserves the `[1.0.0]` section unchanged, applies any body changes from modified, and inserts the new `[1.1.0]` section after its nearest matched predecessor.
+### Render
 
-### With options
+```go
+doc, _ := splice.Parse("# Hello\n\nWorld")
+output := splice.Render(doc)
+fmt.Println(output)
+// Output:
+// # Hello
+//
+// World
+```
+
+### Merge
+
+```go
+original := "# Changelog\n\n## [1.0.0]\n\n- Initial release\n"
+modified := "# Changelog\n\n## [1.0.0]\n\n- Initial release\n\n## [1.1.0]\n\n- Dark mode\n"
+
+result, err := splice.Merge(context.Background(), original, modified)
+if err != nil {
+    log.Fatal(err)
+}
+// Sections only in modified are inserted after their nearest match.
+// New section [1.1.0] appears right after [1.0.0].
+```
+
+### MergeAST
+
+```go
+origDoc, _ := splice.Parse("# A\n\nContent A")
+modDoc, _ := splice.Parse("# A\n\nContent B\n\n## C\n\nNew section")
+
+merged := splice.MergeAST(origDoc, modDoc)
+output := splice.Render(merged)
+// Original heading A keeps modified body ("Content B").
+// New section C is inserted after its nearest match (A).
+```
+
+### Options
 
 ```go
 result, err := splice.Merge(ctx, original, modified,
@@ -52,33 +74,20 @@ result, err := splice.Merge(ctx, original, modified,
 )
 ```
 
-### Working with the AST
+Custom block merger:
 
 ```go
-origDoc, _ := splice.Parse(original)
-modDoc, _ := splice.Parse(modified)
-
-mergedDoc := splice.MergeAST(origDoc, modDoc)
-
-output := splice.Render(mergedDoc)
+result, err := splice.Merge(ctx, original, modified,
+    splice.WithBlockMerger(func(orig, mod ast.Block) (ast.Block, bool) {
+        // Merge tables row by row instead of replacing.
+        if orig.Kind() == ast.KindTable && mod.Kind() == ast.KindTable {
+            // custom table merge logic
+            return mergedBlock, true
+        }
+        return nil, false // fallback to default
+    }),
+)
 ```
-
-## API
-
-| Function | Description |
-|----------|-------------|
-| `Parse(input string) (*ast.Document, error)` | Parse Markdown into an AST. |
-| `Render(doc *ast.Document) string` | Render an AST back to Markdown. |
-| `Merge(ctx, original, modified string, opts ...Option) (string, error)` | 3-way merge two Markdown documents. |
-| `MergeAST(origDoc, modDoc *ast.Document, opts ...Option) *ast.Document` | Merge two pre-parsed ASTs. |
-
-### Options
-
-- `WithThreshold(t float64)` — similarity threshold for block matching (0.0–1.0, default 0.7).
-- `WithCaseInsensitive(enabled bool)` — case-insensitive heading matching.
-- `WithBlockMerger(fn func(orig, mod ast.Block) (ast.Block, bool))` — custom per-block merger for advanced use cases (e.g., table-aware merge).
-
-See the [package docs](https://pkg.go.dev/github.com/blak0p/splice) on pkg.go.dev for the full API reference.
 
 ## How it works
 
