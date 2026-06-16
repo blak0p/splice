@@ -6,11 +6,26 @@ import (
 	"github.com/blak0p/splice/ast"
 )
 
-// MergeDocuments combines original and modified documents. Sections that exist
-// in both documents keep the modified body; sections only in original are
-// preserved; sections only in modified are inserted after their nearest matched
-// predecessor.
-func MergeDocuments(original, modified *ast.Document) *ast.Document {
+// Config controls merge behavior.
+type Config struct {
+	Threshold       float64
+	CaseInsensitive bool
+	BlockMerger     func(orig, mod ast.Block) (ast.Block, bool)
+}
+
+// DefaultConfig returns a Config with the standard similarity threshold.
+func DefaultConfig() *Config {
+	return &Config{Threshold: 0.7, CaseInsensitive: true}
+}
+
+// MergeAST combines original and modified documents. Sections that exist in both
+// documents keep the modified body; sections only in original are preserved;
+// sections only in modified are inserted after their nearest matched predecessor.
+func MergeAST(original, modified *ast.Document, cfg *Config) *ast.Document {
+	if cfg == nil {
+		cfg = DefaultConfig()
+	}
+
 	if original == nil && modified == nil {
 		return &ast.Document{}
 	}
@@ -26,7 +41,7 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 	var merged []ast.Section
 
 	for i, origSection := range original.Sections {
-		matchIdx := findMatch(origSection, i, original.Sections, modified.Sections, matched)
+		matchIdx := findMatch(origSection, i, original.Sections, modified.Sections, matched, cfg)
 		if matchIdx == -1 {
 			merged = append(merged, origSection)
 			continue
@@ -35,7 +50,7 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 		modSection := modified.Sections[matchIdx]
 		merged = append(merged, ast.Section{
 			Heading: modSection.Heading,
-			Body:    ast.Body{Blocks: mergeBody(origSection.Body.Blocks, modSection.Body.Blocks)},
+			Body:    ast.Body{Blocks: mergeBody(origSection.Body.Blocks, modSection.Body.Blocks, cfg)},
 		})
 		modIdxToMergedIdx[matchIdx] = len(merged) - 1
 		matched[matchIdx] = true
@@ -70,7 +85,7 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 // findMatch locates the section in modified that corresponds to original. It
 // first tries exact heading match with positional bookkeeping, then falls back
 // to the first unmatched implicit section for pre-heading content.
-func findMatch(origSection ast.Section, origIndex int, originalSections, modifiedSections []ast.Section, matched []bool) int {
+func findMatch(origSection ast.Section, origIndex int, originalSections, modifiedSections []ast.Section, matched []bool, cfg *Config) int {
 	if origSection.Heading == nil {
 		return findUnmatchedImplicit(modifiedSections, matched)
 	}
@@ -78,7 +93,7 @@ func findMatch(origSection ast.Section, origIndex int, originalSections, modifie
 	occurrence := 0
 	for j := 0; j <= origIndex; j++ {
 		if originalSections[j].Heading != nil &&
-			normalizeHeading(originalSections[j].Heading.Text) == normalizeHeading(origSection.Heading.Text) {
+			headingEqual(originalSections[j].Heading.Text, origSection.Heading.Text, cfg) {
 			occurrence++
 		}
 	}
@@ -88,7 +103,7 @@ func findMatch(origSection ast.Section, origIndex int, originalSections, modifie
 		if ms.Heading == nil {
 			continue
 		}
-		if normalizeHeading(ms.Heading.Text) == normalizeHeading(origSection.Heading.Text) {
+		if headingEqual(ms.Heading.Text, origSection.Heading.Text, cfg) {
 			count++
 			if count == occurrence && !matched[i] {
 				return i
@@ -97,6 +112,13 @@ func findMatch(origSection ast.Section, origIndex int, originalSections, modifie
 	}
 
 	return -1
+}
+
+func headingEqual(a, b string, cfg *Config) bool {
+	if cfg != nil && cfg.CaseInsensitive {
+		return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
+	}
+	return strings.TrimSpace(a) == strings.TrimSpace(b)
 }
 
 func findUnmatchedImplicit(modifiedSections []ast.Section, matched []bool) int {
@@ -117,10 +139,6 @@ func findInsertIndex(modIndex int, matched []bool, modIdxToMergedIdx map[int]int
 		}
 	}
 	return -1
-}
-
-func normalizeHeading(text string) string {
-	return strings.ToLower(strings.TrimSpace(text))
 }
 
 func shallowCopy(doc *ast.Document) *ast.Document {

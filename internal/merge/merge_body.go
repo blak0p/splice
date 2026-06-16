@@ -6,26 +6,34 @@ import (
 	"github.com/blak0p/splice/ast"
 )
 
-const similarityThreshold = 0.70
-
-// mergeBody combines original and modified AST body blocks.
-func mergeBody(origBlocks, modBlocks []ast.Block) []ast.Block {
+// mergeBody combines original and modified AST body blocks using the provided
+// configuration. A custom BlockMerger, if set, takes precedence over the
+// default per-kind merge logic.
+func mergeBody(origBlocks, modBlocks []ast.Block, cfg *Config) []ast.Block {
 	var merged []ast.Block
 	for i := 0; i < len(modBlocks); i++ {
 		if i < len(origBlocks) {
 			orig, mod := origBlocks[i], modBlocks[i]
-	if orig.Kind() == mod.Kind() {
-		switch orig.Kind() {
-		case ast.KindParagraph:
-			merged = append(merged, ast.Paragraph{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
-		case ast.KindList:
-			merged = append(merged, ast.List{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
-		default:
-			merged = append(merged, mod) // Atomic Table/CodeBlock merge
-		}
-	} else {
-		merged = append(merged, mod) // Kind mismatch: atomic replace
-	}
+
+			if cfg != nil && cfg.BlockMerger != nil {
+				if block, ok := cfg.BlockMerger(orig, mod); ok {
+					merged = append(merged, block)
+					continue
+				}
+			}
+
+			if orig.Kind() == mod.Kind() {
+				switch orig.Kind() {
+				case ast.KindParagraph:
+					merged = append(merged, ast.Paragraph{ContentLines: mergeLines(orig.Lines(), mod.Lines(), cfg)})
+				case ast.KindList:
+					merged = append(merged, ast.List{ContentLines: mergeLines(orig.Lines(), mod.Lines(), cfg)})
+				default:
+					merged = append(merged, mod) // Atomic Table/CodeBlock merge
+				}
+			} else {
+				merged = append(merged, mod) // Kind mismatch: atomic replace
+			}
 		} else {
 			merged = append(merged, modBlocks[i]) // Append new blocks
 		}
@@ -36,8 +44,14 @@ func mergeBody(origBlocks, modBlocks []ast.Block) []ast.Block {
 // mergeLines combines original and modified body lines. It preserves lines that
 // exist in both documents at the same position, replaces original lines with
 // similar modified lines using a fuzzy dice coefficient match, and appends new
-// modified lines that have no match.
-func mergeLines(origLines, modLines []string) []string {
+// modified lines that have no match. The similarity threshold is taken from
+// cfg, defaulting to 0.7 when cfg is nil.
+func mergeLines(origLines, modLines []string, cfg *Config) []string {
+	threshold := 0.7
+	if cfg != nil && cfg.Threshold > 0 {
+		threshold = cfg.Threshold
+	}
+
 	if len(origLines) == 0 && len(modLines) == 0 {
 		return []string{}
 	}
@@ -94,7 +108,7 @@ func mergeLines(origLines, modLines []string) []string {
 				bestIdx = j
 			}
 		}
-		if bestIdx != -1 && bestScore >= similarityThreshold {
+		if bestIdx != -1 && bestScore >= threshold {
 			origMatched[bestIdx] = true
 			modMatched[i] = true
 		}

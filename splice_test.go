@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/blak0p/splice"
+	"github.com/blak0p/splice/ast"
 )
 
 // TestMerge_Success verifies that two valid markdown documents merge correctly.
@@ -248,5 +249,91 @@ func TestMerge_E2E(t *testing.T) {
 				t.Fatalf("expected:\n%s\n\ngot:\n%s", string(expected), got)
 			}
 		})
+	}
+}
+
+// TestParseRenderRoundTrip verifies Parse + Render round-trip.
+func TestParseRenderRoundTrip(t *testing.T) {
+	input := "# Hello\n\nWorld\n\n## Section\n\nContent\n"
+	doc, err := splice.Parse(input)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	output := splice.Render(doc)
+	if output != input {
+		t.Fatalf("round-trip mismatch:\nexpected:\n%s\n\ngot:\n%s", input, output)
+	}
+}
+
+// TestParseEmpty verifies Parse handles empty input.
+func TestParseEmpty(t *testing.T) {
+	doc, err := splice.Parse("")
+	if err != nil {
+		t.Fatalf("Parse empty failed: %v", err)
+	}
+	if doc == nil {
+		t.Fatal("expected non-nil document")
+	}
+}
+
+// TestMergeAST verifies MergeAST works with pre-parsed documents.
+func TestMergeAST(t *testing.T) {
+	origDoc, _ := splice.Parse("# Section\n\nOriginal\n")
+	modDoc, _ := splice.Parse("# Section\n\nModified\n")
+	merged := splice.MergeAST(origDoc, modDoc)
+	output := splice.Render(merged)
+	if !strings.Contains(output, "Modified") {
+		t.Errorf("expected modified content, got:\n%s", output)
+	}
+}
+
+// TestWithThreshold verifies WithThreshold(0.95) treats similar blocks as distinct.
+func TestWithThreshold(t *testing.T) {
+	ctx := context.Background()
+	original := "# Section\n\nHello world\n"
+	modified := "# Section\n\nHello world modified\n"
+	// With strict threshold, similar but non-matching lines should be treated as distinct
+	result, err := splice.Merge(ctx, original, modified, splice.WithThreshold(0.95))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "Hello world modified") {
+		t.Errorf("expected modified content, got:\n%s", result)
+	}
+}
+
+// TestWithCaseInsensitive verifies headings match case-insensitively.
+func TestWithCaseInsensitive(t *testing.T) {
+	ctx := context.Background()
+	original := "# Intro\n\nOriginal\n"
+	modified := "# intro\n\nModified\n"
+	result, err := splice.Merge(ctx, original, modified, splice.WithCaseInsensitive(true))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "Modified") {
+		t.Errorf("expected modified content with case-insensitive match, got:\n%s", result)
+	}
+}
+
+// TestWithBlockMerger verifies custom block merger callback is invoked.
+func TestWithBlockMerger(t *testing.T) {
+	ctx := context.Background()
+	original := "# Section\n\nHello\n"
+	modified := "# Section\n\nWorld\n"
+	called := false
+	merger := func(orig, mod ast.Block) (ast.Block, bool) {
+		called = true
+		return mod, true
+	}
+	result, err := splice.Merge(ctx, original, modified, splice.WithBlockMerger(merger))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("expected WithBlockMerger callback to be invoked")
+	}
+	if !strings.Contains(result, "World") {
+		t.Errorf("expected merged content from custom merger, got:\n%s", result)
 	}
 }
