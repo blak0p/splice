@@ -4,9 +4,7 @@
 [![Tests](https://github.com/blak0p/splice/actions/workflows/test.yml/badge.svg)](https://github.com/blak0p/splice/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**splice** is a semantic Markdown merge library. It parses Markdown into an AST, performs section-aware 3-way merging with block-level precision, and renders the result back — preserving document structure, not just lines.
-
-Use it for changelog fusion, LLM-friendly document operations, or any scenario where you need to merge Markdown documents intelligently.
+**splice** is a Go library for section-aware 3-way merging of Markdown documents. It parses Markdown into an AST, matches sections by heading, applies changes at block level, and renders the result — all without treating your document as plain text.
 
 ## Installation
 
@@ -32,30 +30,37 @@ import (
 func main() {
     ctx := context.Background()
 
-    og := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n"
-    mod := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n\n## [1.1.0] — 2026-03-01\n\n### Added\n\n- Dark mode\n"
+    original := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n"
+    modified := "# Changelog\n\n## [1.0.0] — 2026-01-15\n\n### Added\n\n- Initial release\n\n## [1.1.0] — 2026-03-01\n\n### Added\n\n- Dark mode\n"
 
-    result, err := splice.Merge(ctx, og, mod)
+    result, err := splice.Merge(ctx, original, modified)
     if err != nil {
         log.Fatal(err)
     }
     fmt.Println(result)
 }
+```
 
-// Output:
-// # Changelog
-//
-// ## [1.0.0] — 2026-01-15
-//
-// ### Added
-//
-// - Initial release
-//
-// ## [1.1.0] — 2026-03-01
-//
-// ### Added
-//
-// - Dark mode
+The merge preserves the `[1.0.0]` section unchanged, applies any body changes from modified, and inserts the new `[1.1.0]` section after its nearest matched predecessor.
+
+### With options
+
+```go
+result, err := splice.Merge(ctx, original, modified,
+    splice.WithThreshold(0.5),
+    splice.WithCaseInsensitive(true),
+)
+```
+
+### Working with the AST
+
+```go
+origDoc, _ := splice.Parse(original)
+modDoc, _ := splice.Parse(modified)
+
+mergedDoc := splice.MergeAST(origDoc, modDoc)
+
+output := splice.Render(mergedDoc)
 ```
 
 ## API
@@ -73,7 +78,7 @@ func main() {
 - `WithCaseInsensitive(enabled bool)` — case-insensitive heading matching.
 - `WithBlockMerger(fn func(orig, mod ast.Block) (ast.Block, bool))` — custom per-block merger for advanced use cases (e.g., table-aware merge).
 
-See the [package docs](https://pkg.go.dev/github.com/blak0p/splice) on pkg.go.dev for full API reference.
+See the [package docs](https://pkg.go.dev/github.com/blak0p/splice) on pkg.go.dev for the full API reference.
 
 ## How it works
 
