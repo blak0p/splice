@@ -18,7 +18,7 @@ func TestMergeNormalizedHeadingMatch(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 1 {
 		t.Fatalf("expected 1 section, got %d", len(got.Sections))
 	}
@@ -40,7 +40,7 @@ func TestMergePreservesOriginalOnlySections(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
@@ -68,7 +68,7 @@ func TestMergeModifiedBodyReplacesOriginal(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
@@ -93,7 +93,7 @@ func TestMergeAddsNewSectionsFromModified(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
@@ -115,7 +115,7 @@ func TestMergePreHeadingContent(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
@@ -144,7 +144,7 @@ func TestMergeDuplicateHeadingsByPosition(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
@@ -160,7 +160,7 @@ func TestMergeEmptyDocuments(t *testing.T) {
 	original := &ast.Document{}
 	modified := &ast.Document{}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 0 {
 		t.Fatalf("expected 0 sections, got %d", len(got.Sections))
 	}
@@ -182,7 +182,7 @@ func TestMerge_InsertRelativeToDeletedSections(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 4 {
 		t.Fatalf("expected 4 sections, got %d", len(got.Sections))
 	}
@@ -208,7 +208,7 @@ func TestMerge_MultipleSequentialInsertions(t *testing.T) {
 		},
 	}
 
-	got := MergeDocuments(original, modified)
+	got := MergeAST(original, modified, DefaultConfig())
 	if len(got.Sections) != 4 {
 		t.Fatalf("expected 4 sections, got %d", len(got.Sections))
 	}
