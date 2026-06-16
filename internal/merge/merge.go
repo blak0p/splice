@@ -3,7 +3,7 @@ package merge
 import (
 	"strings"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 // MergeDocuments combines original and modified documents. Sections that exist

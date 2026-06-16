@@ -36,19 +36,19 @@ func (b Body) Lines() []string {
 	return lines
 }
 
-// BlockType represents the specific semantic kind of Markdown block.
-type BlockType string
+// BlockKind represents the specific semantic kind of Markdown block.
+type BlockKind string
 
 const (
-	BlockParagraph BlockType = "Paragraph"
-	BlockList      BlockType = "List"
-	BlockTable     BlockType = "Table"
-	BlockCodeBlock BlockType = "CodeBlock"
+	KindParagraph BlockKind = "Paragraph"
+	KindList      BlockKind = "List"
+	KindTable     BlockKind = "Table"
+	KindCodeBlock BlockKind = "CodeBlock"
 )
 
 // Block is the interface implemented by all concrete AST blocks.
 type Block interface {
-	Type() BlockType
+	Kind() BlockKind
 	Lines() []string
 }
 
@@ -57,7 +57,7 @@ type Paragraph struct {
 	ContentLines []string
 }
 
-func (p Paragraph) Type() BlockType { return BlockParagraph }
+func (p Paragraph) Kind() BlockKind { return KindParagraph }
 func (p Paragraph) Lines() []string { return p.ContentLines }
 
 // List represents a bulleted or numbered list.
@@ -65,7 +65,7 @@ type List struct {
 	ContentLines []string
 }
 
-func (l List) Type() BlockType { return BlockList }
+func (l List) Kind() BlockKind { return KindList }
 func (l List) Lines() []string { return l.ContentLines }
 
 // Table represents a Markdown table.
@@ -73,7 +73,7 @@ type Table struct {
 	ContentLines []string
 }
 
-func (t Table) Type() BlockType { return BlockTable }
+func (t Table) Kind() BlockKind { return KindTable }
 func (t Table) Lines() []string { return t.ContentLines }
 
 // CodeBlock represents a fenced or indented block of code.
@@ -81,5 +81,5 @@ type CodeBlock struct {
 	ContentLines []string
 }
 
-func (c CodeBlock) Type() BlockType { return BlockCodeBlock }
+func (c CodeBlock) Kind() BlockKind { return KindCodeBlock }
 func (c CodeBlock) Lines() []string { return c.ContentLines }

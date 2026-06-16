@@ -3,7 +3,7 @@ package renderer
 import (
 	"strings"
 
-	"github.com/blak0p/splice/internal/ast"
+	"github.com/blak0p/splice/ast"
 )
 
 // Render converts a Document back into Markdown text.
