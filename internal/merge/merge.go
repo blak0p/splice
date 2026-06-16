@@ -34,7 +34,7 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 		modSection := modified.Sections[matchIdx]
 		merged = append(merged, ast.Section{
 			Heading: modSection.Heading,
-			Body:    ast.Body{Lines: mergeBody(origSection.Body.Lines, modSection.Body.Lines)},
+			Body:    ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: mergeBody(origSection.Body.Lines(), modSection.Body.Lines())}}},
 		})
 		matched[matchIdx] = true
 	}

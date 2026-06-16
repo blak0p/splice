@@ -24,14 +24,36 @@ func Render(doc *ast.Document) string {
 			sb.WriteByte(' ')
 			sb.WriteString(section.Heading.Text)
 		}
-		if len(section.Body.Lines) > 0 {
+
+		var blockStrings []string
+		for _, block := range section.Body.Blocks {
+			if isBlockEmpty(block) {
+				continue
+			}
+			blockStrings = append(blockStrings, strings.Join(block.Lines(), "\n"))
+		}
+
+		if len(blockStrings) > 0 {
 			if section.Heading != nil {
 				sb.WriteString("\n\n")
 			}
-			sb.WriteString(strings.Join(section.Body.Lines, "\n"))
+			sb.WriteString(strings.Join(blockStrings, "\n\n"))
 		}
 		sections = append(sections, sb.String())
 	}
 
 	return strings.Join(sections, "\n\n") + "\n"
+}
+
+func isBlockEmpty(b ast.Block) bool {
+	lines := b.Lines()
+	if len(lines) == 0 {
+		return true
+	}
+	for _, l := range lines {
+		if strings.TrimSpace(l) != "" {
+			return false
+		}
+	}
+	return true
 }

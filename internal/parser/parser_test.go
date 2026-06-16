@@ -33,8 +33,8 @@ func TestParsePreHeadingContent(t *testing.T) {
 		t.Fatalf("expected implicit section with nil heading, got %+v", doc.Sections[0].Heading)
 	}
 	want := []string{"pre-heading content"}
-	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
-		t.Fatalf("unexpected pre-heading content: %v", doc.Sections[0].Body.Lines)
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines(), want) {
+		t.Fatalf("unexpected pre-heading content: %v", doc.Sections[0].Body.Lines())
 	}
 	assertSection(t, doc.Sections[1], 1, "First", []string{"body"})
 }
@@ -52,8 +52,8 @@ func TestParseNoHeadings(t *testing.T) {
 		t.Fatalf("expected implicit section with nil heading, got %+v", doc.Sections[0].Heading)
 	}
 	want := []string{"just some content", "without headings"}
-	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
-		t.Fatalf("unexpected body content: %v", doc.Sections[0].Body.Lines)
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines(), want) {
+		t.Fatalf("unexpected body content: %v", doc.Sections[0].Body.Lines())
 	}
 }
 
@@ -90,8 +90,71 @@ func TestParseBlankLinesBetweenBlocks(t *testing.T) {
 		t.Fatalf("expected 1 section, got %d", len(doc.Sections))
 	}
 	want := []string{"First block.", "", "Second block."}
-	if !reflect.DeepEqual(doc.Sections[0].Body.Lines, want) {
-		t.Fatalf("expected %v, got %v", want, doc.Sections[0].Body.Lines)
+	if !reflect.DeepEqual(doc.Sections[0].Body.Lines(), want) {
+		t.Fatalf("expected %v, got %v", want, doc.Sections[0].Body.Lines())
+	}
+}
+
+func TestParseBlockTypes(t *testing.T) {
+	input := `# Test Section
+
+This is a paragraph.
+
+- Item 1
+- Item 2
+
+| Col 1 | Col 2 |
+|---|---|
+| Val 1 | Val 2 |
+
+` + "```go" + `
+func main() {}
+` + "```" + `
+`
+	doc, err := Parse(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(doc.Sections) != 1 {
+		t.Fatalf("expected 1 section, got %d", len(doc.Sections))
+	}
+	sect := doc.Sections[0]
+	if len(sect.Body.Blocks) != 4 {
+		t.Fatalf("expected 4 blocks, got %d", len(sect.Body.Blocks))
+	}
+
+	if sect.Body.Blocks[0].Type() != ast.BlockParagraph {
+		t.Errorf("expected BlockParagraph, got %v", sect.Body.Blocks[0].Type())
+	}
+	if sect.Body.Blocks[1].Type() != ast.BlockList {
+		t.Errorf("expected BlockList, got %v", sect.Body.Blocks[1].Type())
+	}
+	if sect.Body.Blocks[2].Type() != ast.BlockTable {
+		t.Errorf("expected BlockTable, got %v", sect.Body.Blocks[2].Type())
+	}
+	if sect.Body.Blocks[3].Type() != ast.BlockCodeBlock {
+		t.Errorf("expected BlockCodeBlock, got %v", sect.Body.Blocks[3].Type())
+	}
+}
+
+func TestParseFallbackToParagraph(t *testing.T) {
+	input := `# HTML Section
+
+<div>Some html</div>
+`
+	doc, err := Parse(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(doc.Sections) != 1 {
+		t.Fatalf("expected 1 section, got %d", len(doc.Sections))
+	}
+	sect := doc.Sections[0]
+	if len(sect.Body.Blocks) != 1 {
+		t.Fatalf("expected 1 block, got %d", len(sect.Body.Blocks))
+	}
+	if sect.Body.Blocks[0].Type() != ast.BlockParagraph {
+		t.Errorf("expected BlockParagraph for HTML fallback, got %v", sect.Body.Blocks[0].Type())
 	}
 }
 
@@ -106,7 +169,7 @@ func assertSection(t *testing.T, s ast.Section, level int, text string, body []s
 	if s.Heading.Text != text {
 		t.Fatalf("expected heading text %q, got %q", text, s.Heading.Text)
 	}
-	if !reflect.DeepEqual(s.Body.Lines, body) {
-		t.Fatalf("expected body %v, got %v", body, s.Body.Lines)
+	if !reflect.DeepEqual(s.Body.Lines(), body) {
+		t.Fatalf("expected body %v, got %v", body, s.Body.Lines())
 	}
 }

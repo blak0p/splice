@@ -31,8 +31,8 @@ func TestRenderRoundTrip(t *testing.T) {
 func TestRenderPreHeadingThenHeadings(t *testing.T) {
 	doc := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: nil, Body: ast.Body{Lines: []string{"pre-heading content"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "First"}, Body: ast.Body{Lines: []string{"body"}}},
+			{Heading: nil, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"pre-heading content"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "First"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"body"}}}}},
 		},
 	}
 
@@ -46,9 +46,9 @@ func TestRenderPreHeadingThenHeadings(t *testing.T) {
 func TestRenderMultiSectionPreservesBoundaries(t *testing.T) {
 	doc := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "One"}, Body: ast.Body{Lines: []string{"body one"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "Two"}, Body: ast.Body{Lines: []string{"body two"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "Three"}, Body: ast.Body{Lines: []string{"body three"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "One"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"body one"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Two"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"body two"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Three"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"body three"}}}}},
 		},
 	}
 
@@ -62,13 +62,78 @@ func TestRenderMultiSectionPreservesBoundaries(t *testing.T) {
 func TestRenderTrailingNewline(t *testing.T) {
 	doc := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "Title"}, Body: ast.Body{Lines: []string{"body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Title"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"body"}}}}},
 		},
 	}
 
 	got := Render(doc)
 	if !strings.HasSuffix(got, "\n") {
 		t.Fatalf("expected trailing newline, got %q", got)
+	}
+}
+
+func TestRenderMultipleBlocks(t *testing.T) {
+	doc := &ast.Document{
+		Sections: []ast.Section{
+			{
+				Heading: &ast.Heading{Level: 1, Text: "Blocks"},
+				Body: ast.Body{
+					Blocks: []ast.Block{
+						ast.Paragraph{ContentLines: []string{"Paragraph line 1.", "Paragraph line 2."}},
+						ast.List{ContentLines: []string{"- Item 1", "- Item 2"}},
+						ast.Table{ContentLines: []string{"| Col 1 |", "|---|", "| Val 1 |"}},
+						ast.CodeBlock{ContentLines: []string{"```go", "main()", "```"}},
+					},
+				},
+			},
+		},
+	}
+
+	got := Render(doc)
+	want := `# Blocks
+
+Paragraph line 1.
+Paragraph line 2.
+
+- Item 1
+- Item 2
+
+| Col 1 |
+|---|
+| Val 1 |
+
+` + "```go" + `
+main()
+` + "```" + `
+`
+	if got != want {
+		t.Fatalf("expected:\n%q\n\ngot:\n%q", want, got)
+	}
+}
+
+func TestRenderEmptyBlocks(t *testing.T) {
+	doc := &ast.Document{
+		Sections: []ast.Section{
+			{
+				Heading: &ast.Heading{Level: 1, Text: "Empty"},
+				Body: ast.Body{
+					Blocks: []ast.Block{
+						ast.Paragraph{ContentLines: []string{}},
+						ast.Paragraph{ContentLines: []string{""}},
+						ast.List{ContentLines: []string{"- item"}},
+					},
+				},
+			},
+		},
+	}
+
+	got := Render(doc)
+	want := `# Empty
+
+- item
+`
+	if got != want {
+		t.Fatalf("expected:\n%q\n\ngot:\n%q", want, got)
 	}
 }
 
@@ -83,12 +148,12 @@ func assertSection(t *testing.T, s ast.Section, level int, text string, body []s
 	if s.Heading.Text != text {
 		t.Fatalf("expected text %q, got %q", text, s.Heading.Text)
 	}
-	if len(s.Body.Lines) != len(body) {
-		t.Fatalf("expected body %v, got %v", body, s.Body.Lines)
+	if len(s.Body.Lines()) != len(body) {
+		t.Fatalf("expected body %v, got %v", body, s.Body.Lines())
 	}
 	for i, line := range body {
-		if s.Body.Lines[i] != line {
-			t.Fatalf("expected body line %q, got %q", line, s.Body.Lines[i])
+		if s.Body.Lines()[i] != line {
+			t.Fatalf("expected body line %q, got %q", line, s.Body.Lines()[i])
 		}
 	}
 }

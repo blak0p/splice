@@ -86,8 +86,7 @@ func flattenChildSections(node *sitter.Node, src []byte) []ast.Section {
 // Returns nil if the section has no content (pure grouping node).
 func extractSection(node *sitter.Node, src []byte) *ast.Section {
 	var heading *ast.Heading
-	var lines []string
-	var blockCount int
+	var blocks []ast.Block
 
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
@@ -106,22 +105,39 @@ func extractSection(node *sitter.Node, src []byte) *ast.Section {
 				continue
 			}
 
-			if blockCount > 0 {
-				lines = append(lines, "")
-			}
-			blockCount++
-
-			lines = append(lines, strings.Split(content, "\n")...)
+			blocks = append(blocks, mapNodeToBlock(child, src))
 		}
 	}
 
-	if heading == nil && len(lines) == 0 {
+	if heading == nil && len(blocks) == 0 {
 		return nil
 	}
 
 	return &ast.Section{
 		Heading: heading,
-		Body:    ast.Body{Lines: lines},
+		Body:    ast.Body{Blocks: blocks},
+	}
+}
+
+func mapNodeToBlock(child *sitter.Node, src []byte) ast.Block {
+	content := child.Content(src)
+	content = strings.TrimSuffix(content, "\n")
+	var lines []string
+	if content != "" {
+		lines = strings.Split(content, "\n")
+	}
+
+	switch child.Type() {
+	case "paragraph":
+		return ast.Paragraph{ContentLines: lines}
+	case "list":
+		return ast.List{ContentLines: lines}
+	case "pipe_table", "table":
+		return ast.Table{ContentLines: lines}
+	case "fenced_code_block", "indented_code_block":
+		return ast.CodeBlock{ContentLines: lines}
+	default:
+		return ast.Paragraph{ContentLines: lines}
 	}
 }
 

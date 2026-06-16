@@ -9,12 +9,12 @@ import (
 func TestMergeNormalizedHeadingMatch(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "intro"}, Body: ast.Body{Lines: []string{"original body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "intro"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"original body"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "INTRO"}, Body: ast.Body{Lines: []string{"modified body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "INTRO"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"modified body"}}}}},
 		},
 	}
 
@@ -22,21 +22,21 @@ func TestMergeNormalizedHeadingMatch(t *testing.T) {
 	if len(got.Sections) != 1 {
 		t.Fatalf("expected 1 section, got %d", len(got.Sections))
 	}
-	if got.Sections[0].Body.Lines[0] != "modified body" {
-		t.Fatalf("expected modified body, got %q", got.Sections[0].Body.Lines)
+	if got.Sections[0].Body.Lines()[0] != "modified body" {
+		t.Fatalf("expected modified body, got %q", got.Sections[0].Body.Lines())
 	}
 }
 
 func TestMergePreservesOriginalOnlySections(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "keep"}, Body: ast.Body{Lines: []string{"original body"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "remove"}, Body: ast.Body{Lines: []string{"gone"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "keep"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"original body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "remove"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"gone"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "keep"}, Body: ast.Body{Lines: []string{"modified body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "keep"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"modified body"}}}}},
 		},
 	}
 
@@ -46,25 +46,25 @@ func TestMergePreservesOriginalOnlySections(t *testing.T) {
 	}
 	assertSectionHeading(t, got.Sections[0], "keep")
 	assertSectionHeading(t, got.Sections[1], "remove")
-	if got.Sections[0].Body.Lines[0] != "modified body" {
-		t.Fatalf("expected modified body for keep, got %q", got.Sections[0].Body.Lines)
+	if got.Sections[0].Body.Lines()[0] != "modified body" {
+		t.Fatalf("expected modified body for keep, got %q", got.Sections[0].Body.Lines())
 	}
-	if got.Sections[1].Body.Lines[0] != "gone" {
-		t.Fatalf("expected original body for remove, got %q", got.Sections[1].Body.Lines)
+	if got.Sections[1].Body.Lines()[0] != "gone" {
+		t.Fatalf("expected original body for remove, got %q", got.Sections[1].Body.Lines())
 	}
 }
 
 func TestMergeModifiedBodyReplacesOriginal(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Lines: []string{"a original"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "b"}, Body: ast.Body{Lines: []string{"b original"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"a original"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "b"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"b original"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Lines: []string{"a modified"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "b"}, Body: ast.Body{Lines: []string{"b modified"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"a modified"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "b"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"b modified"}}}}},
 		},
 	}
 
@@ -72,24 +72,24 @@ func TestMergeModifiedBodyReplacesOriginal(t *testing.T) {
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
-	if got.Sections[0].Body.Lines[0] != "a modified" {
-		t.Fatalf("expected a modified, got %q", got.Sections[0].Body.Lines)
+	if got.Sections[0].Body.Lines()[0] != "a modified" {
+		t.Fatalf("expected a modified, got %q", got.Sections[0].Body.Lines())
 	}
-	if got.Sections[1].Body.Lines[0] != "b modified" {
-		t.Fatalf("expected b modified, got %q", got.Sections[1].Body.Lines)
+	if got.Sections[1].Body.Lines()[0] != "b modified" {
+		t.Fatalf("expected b modified, got %q", got.Sections[1].Body.Lines())
 	}
 }
 
 func TestMergeAddsNewSectionsFromModified(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "first"}, Body: ast.Body{Lines: []string{"first body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "first"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"first body"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "first"}, Body: ast.Body{Lines: []string{"first body"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "second"}, Body: ast.Body{Lines: []string{"second body"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "first"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"first body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "second"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"second body"}}}}},
 		},
 	}
 
@@ -104,14 +104,14 @@ func TestMergeAddsNewSectionsFromModified(t *testing.T) {
 func TestMergePreHeadingContent(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: nil, Body: ast.Body{Lines: []string{"original pre"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Lines: []string{"a body"}}},
+			{Heading: nil, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"original pre"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"a body"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: nil, Body: ast.Body{Lines: []string{"modified pre"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Lines: []string{"a modified"}}},
+			{Heading: nil, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"modified pre"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "a"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"a modified"}}}}},
 		},
 	}
 
@@ -122,25 +122,25 @@ func TestMergePreHeadingContent(t *testing.T) {
 	if got.Sections[0].Heading != nil {
 		t.Fatalf("expected implicit section first")
 	}
-	if got.Sections[0].Body.Lines[0] != "modified pre" {
-		t.Fatalf("expected modified pre, got %q", got.Sections[0].Body.Lines)
+	if got.Sections[0].Body.Lines()[0] != "modified pre" {
+		t.Fatalf("expected modified pre, got %q", got.Sections[0].Body.Lines())
 	}
-	if got.Sections[1].Body.Lines[0] != "a modified" {
-		t.Fatalf("expected a modified, got %q", got.Sections[1].Body.Lines)
+	if got.Sections[1].Body.Lines()[0] != "a modified" {
+		t.Fatalf("expected a modified, got %q", got.Sections[1].Body.Lines())
 	}
 }
 
 func TestMergeDuplicateHeadingsByPosition(t *testing.T) {
 	original := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Lines: []string{"dup1 original"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Lines: []string{"dup2 original"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"dup1 original"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"dup2 original"}}}}},
 		},
 	}
 	modified := &ast.Document{
 		Sections: []ast.Section{
-			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Lines: []string{"dup1 modified"}}},
-			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Lines: []string{"dup2 modified"}}},
+			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"dup1 modified"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "dup"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"dup2 modified"}}}}},
 		},
 	}
 
@@ -148,11 +148,11 @@ func TestMergeDuplicateHeadingsByPosition(t *testing.T) {
 	if len(got.Sections) != 2 {
 		t.Fatalf("expected 2 sections, got %d", len(got.Sections))
 	}
-	if got.Sections[0].Body.Lines[0] != "dup1 modified" {
-		t.Fatalf("expected dup1 modified, got %q", got.Sections[0].Body.Lines)
+	if got.Sections[0].Body.Lines()[0] != "dup1 modified" {
+		t.Fatalf("expected dup1 modified, got %q", got.Sections[0].Body.Lines())
 	}
-	if got.Sections[1].Body.Lines[0] != "dup2 modified" {
-		t.Fatalf("expected dup2 modified, got %q", got.Sections[1].Body.Lines)
+	if got.Sections[1].Body.Lines()[0] != "dup2 modified" {
+		t.Fatalf("expected dup2 modified, got %q", got.Sections[1].Body.Lines())
 	}
 }
 
