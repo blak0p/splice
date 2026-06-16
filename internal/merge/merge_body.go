@@ -1,17 +1,43 @@
 package merge
 
 import (
-	"math"
 	"strings"
+
+	"github.com/blak0p/splice/internal/ast"
 )
 
 const similarityThreshold = 0.70
 
-// mergeBody combines original and modified body lines. It preserves lines that
+// mergeBody combines original and modified AST body blocks.
+func mergeBody(origBlocks, modBlocks []ast.Block) []ast.Block {
+	var merged []ast.Block
+	for i := 0; i < len(modBlocks); i++ {
+		if i < len(origBlocks) {
+			orig, mod := origBlocks[i], modBlocks[i]
+			if orig.Type() == mod.Type() {
+				switch orig.Type() {
+				case ast.BlockParagraph:
+					merged = append(merged, ast.Paragraph{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
+				case ast.BlockList:
+					merged = append(merged, ast.List{ContentLines: mergeLines(orig.Lines(), mod.Lines())})
+				default:
+					merged = append(merged, mod) // Atomic Table/CodeBlock merge
+				}
+			} else {
+				merged = append(merged, mod) // Type mismatch: atomic replace
+			}
+		} else {
+			merged = append(merged, modBlocks[i]) // Append new blocks
+		}
+	}
+	return merged
+}
+
+// mergeLines combines original and modified body lines. It preserves lines that
 // exist in both documents at the same position, replaces original lines with
 // similar modified lines using a fuzzy dice coefficient match, and appends new
 // modified lines that have no match.
-func mergeBody(origLines, modLines []string) []string {
+func mergeLines(origLines, modLines []string) []string {
 	if len(origLines) == 0 && len(modLines) == 0 {
 		return []string{}
 	}
@@ -25,39 +51,57 @@ func mergeBody(origLines, modLines []string) []string {
 	origMatched := make([]bool, len(origLines))
 	modMatched := make([]bool, len(modLines))
 
-	minLen := int(math.Min(float64(len(origLines)), float64(len(modLines))))
+	minLen := len(origLines)
+	if len(modLines) < minLen {
+		minLen = len(modLines)
+	}
 	for i := 0; i < minLen; i++ {
-		origMatched[i] = true
-		modMatched[i] = true
+		if origLines[i] == modLines[i] {
+			origMatched[i] = true
+			modMatched[i] = true
+		}
 	}
 
-	var result []string
 	for i := 0; i < len(modLines); i++ {
 		if modMatched[i] {
-			result = append(result, modLines[i])
 			continue
 		}
-
-		bestIdx := -1
-		bestScore := 0.0
-		for j, origLine := range origLines {
+		for j := 0; j < len(origLines); j++ {
 			if origMatched[j] {
 				continue
 			}
-			score := dice(modLines[i], origLine)
+			if modLines[i] == origLines[j] {
+				origMatched[j] = true
+				modMatched[i] = true
+				break
+			}
+		}
+	}
+
+	for i := 0; i < len(modLines); i++ {
+		if modMatched[i] {
+			continue
+		}
+		bestIdx := -1
+		bestScore := -1.0
+		for j := 0; j < len(origLines); j++ {
+			if origMatched[j] {
+				continue
+			}
+			score := dice(modLines[i], origLines[j])
 			if score > bestScore {
 				bestScore = score
 				bestIdx = j
 			}
 		}
-
-		if bestScore >= similarityThreshold {
+		if bestIdx != -1 && bestScore >= similarityThreshold {
 			origMatched[bestIdx] = true
+			modMatched[i] = true
 		}
-
-		result = append(result, modLines[i])
 	}
 
+	result := make([]string, len(modLines))
+	copy(result, modLines)
 	return result
 }
 

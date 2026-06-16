@@ -166,6 +166,58 @@ func TestMergeEmptyDocuments(t *testing.T) {
 	}
 }
 
+func TestMerge_InsertRelativeToDeletedSections(t *testing.T) {
+	original := &ast.Document{
+		Sections: []ast.Section{
+			{Heading: &ast.Heading{Level: 1, Text: "A"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"A body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "B"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"B body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "C"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"C body"}}}}},
+		},
+	}
+	modified := &ast.Document{
+		Sections: []ast.Section{
+			{Heading: &ast.Heading{Level: 1, Text: "A"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"A body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "X"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"X body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "C"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"C body"}}}}},
+		},
+	}
+
+	got := MergeDocuments(original, modified)
+	if len(got.Sections) != 4 {
+		t.Fatalf("expected 4 sections, got %d", len(got.Sections))
+	}
+	assertSectionHeading(t, got.Sections[0], "A")
+	assertSectionHeading(t, got.Sections[1], "X")
+	assertSectionHeading(t, got.Sections[2], "B")
+	assertSectionHeading(t, got.Sections[3], "C")
+}
+
+func TestMerge_MultipleSequentialInsertions(t *testing.T) {
+	original := &ast.Document{
+		Sections: []ast.Section{
+			{Heading: &ast.Heading{Level: 1, Text: "A"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"A body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "B"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"B body"}}}}},
+		},
+	}
+	modified := &ast.Document{
+		Sections: []ast.Section{
+			{Heading: &ast.Heading{Level: 1, Text: "A"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"A body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "X"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"X body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "Y"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"Y body"}}}}},
+			{Heading: &ast.Heading{Level: 1, Text: "B"}, Body: ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: []string{"B body"}}}}},
+		},
+	}
+
+	got := MergeDocuments(original, modified)
+	if len(got.Sections) != 4 {
+		t.Fatalf("expected 4 sections, got %d", len(got.Sections))
+	}
+	assertSectionHeading(t, got.Sections[0], "A")
+	assertSectionHeading(t, got.Sections[1], "X")
+	assertSectionHeading(t, got.Sections[2], "Y")
+	assertSectionHeading(t, got.Sections[3], "B")
+}
+
 func assertSectionHeading(t *testing.T, s ast.Section, want string) {
 	t.Helper()
 	if s.Heading == nil {
@@ -175,3 +227,4 @@ func assertSectionHeading(t *testing.T, s ast.Section, want string) {
 		t.Fatalf("expected heading %q, got %q", want, s.Heading.Text)
 	}
 }
+

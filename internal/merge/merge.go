@@ -22,6 +22,7 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 	}
 
 	matched := make([]bool, len(modified.Sections))
+	modIdxToMergedIdx := make(map[int]int)
 	var merged []ast.Section
 
 	for i, origSection := range original.Sections {
@@ -34,8 +35,9 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 		modSection := modified.Sections[matchIdx]
 		merged = append(merged, ast.Section{
 			Heading: modSection.Heading,
-			Body:    ast.Body{Blocks: []ast.Block{ast.Paragraph{ContentLines: mergeBody(origSection.Body.Lines(), modSection.Body.Lines())}}},
+			Body:    ast.Body{Blocks: mergeBody(origSection.Body.Blocks, modSection.Body.Blocks)},
 		})
+		modIdxToMergedIdx[matchIdx] = len(merged) - 1
 		matched[matchIdx] = true
 	}
 
@@ -44,14 +46,22 @@ func MergeDocuments(original, modified *ast.Document) *ast.Document {
 			continue
 		}
 
-		insertIdx := findInsertIndex(modSection, i, modified.Sections, matched)
+		insertIdx := findInsertIndex(i, matched, modIdxToMergedIdx)
 		if insertIdx < 0 {
 			merged = append(merged, modSection)
+			modIdxToMergedIdx[i] = len(merged) - 1
 		} else {
+			for k, v := range modIdxToMergedIdx {
+				if v >= insertIdx {
+					modIdxToMergedIdx[k] = v + 1
+				}
+			}
 			merged = append(merged, modSection)
 			copy(merged[insertIdx+1:], merged[insertIdx:])
 			merged[insertIdx] = modSection
+			modIdxToMergedIdx[i] = insertIdx
 		}
+		matched[i] = true
 	}
 
 	return &ast.Document{Sections: merged}
@@ -98,17 +108,14 @@ func findUnmatchedImplicit(modifiedSections []ast.Section, matched []bool) int {
 	return -1
 }
 
-func findInsertIndex(modSection ast.Section, modIndex int, modifiedSections []ast.Section, matched []bool) int {
-	if modIndex == 0 {
-		return -1
-	}
-
+func findInsertIndex(modIndex int, matched []bool, modIdxToMergedIdx map[int]int) int {
 	for i := modIndex - 1; i >= 0; i-- {
 		if matched[i] {
-			return i + 1
+			if mergedIdx, ok := modIdxToMergedIdx[i]; ok {
+				return mergedIdx + 1
+			}
 		}
 	}
-
 	return -1
 }
 
